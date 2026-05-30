@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="manifest.json">
+    <title>Game Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            color: #fff;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Setup Screen */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding-top: 20px;
+            flex: 1;
+        }
+
+        .setup-section {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+        }
+
+        .timer-count-selector {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .timer-count-selector button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: #4a90d9;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .timer-count-selector button:active {
+            transform: scale(0.95);
+        }
+
+        .timer-count-selector span {
+            font-size: 3.5rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .timer-config-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 50vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .timer-config-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .timer-config-item .timer-number {
+            font-weight: bold;
+            min-width: 30px;
+            color: #aaa;
+        }
+
+        .timer-config-item input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .timer-config-item input[type="color"] {
+            width: 50px;
+            height: 44px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .start-btn {
+            padding: 18px 60px;
+            font-size: 1.4rem;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #4a90d9, #67b26f);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            -webkit-tap-highlight-color: transparent;
+            margin-top: auto;
+            margin-bottom: 20px;
+        }
+
+        .start-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Game Screen */
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+            gap: 15px;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        /* Header Bar */
+        .header-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .btn-icon {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+
+        .btn-icon.inactive {
+            opacity: 0.4;
+        }
+
+        /* Footer Bar */
+        .footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            flex-shrink: 0;
+        }
+
+        .btn-footer {
+            padding: 12px 25px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: white;
+            background: transparent;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+
+        .btn-pause.paused {
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        /* Section B - Current Turn */
+        .section-b {
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-top: 10px;
+        }
+
+        /* Player Info - Top third */
+        .player-info-section {
+            flex: 0 0 auto;
+            margin-bottom: 10px;
+        }
+
+        .current-player-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .nav-arrow {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            opacity: 0;
+        }
+
+        .nav-arrow.visible {
+            opacity: 0.6;
+        }
+
+        .nav-arrow.visible:active {
+            opacity: 1;
+        }
+
+        .current-player-info {
+            min-width: 200px;
+        }
+
+        .current-player-info .current-player-title {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .current-player-info .avg-turn-time {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-top: 8px;
+        }
+
+        /* Big circular button - Bottom two thirds */
+        .turn-button-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .btn-turn {
+            width: min(85vw, 350px);
+            height: min(85vw, 350px);
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.7);
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-turn:active {
+            transform: scale(0.98);
+            border-color: rgba(255,255,255,1);
+        }
+
+        .btn-turn .turn-timer {
+            font-size: 4rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: white;
+            margin: 0;
+        }
+
+        .btn-turn .turn-label {
+            font-size: 2.25rem;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        .btn-turn.running {
+            animation: pulse-border 1.5s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(255,255,255,0.7); }
+            50% { border-color: rgba(255,255,255,0.4); }
+        }
+
+        /* Stats Modal */
+        .stats-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .stats-overlay.open {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stats-modal {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stats-header h2 {
+            font-size: 1.3rem;
+            margin: 0;
+        }
+
+        .btn-close-stats {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .player-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .player-tab {
+            padding: 10px 20px;
+            border: 2px solid;
+            border-radius: 25px;
+            background: transparent;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+
+        .player-tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .stats-content {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .stats-player-info {
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 15px;
+        }
+
+        .stats-player-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stats-player-summary {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .stats-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .stats-controls button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .stats-btn-time { background: #3498db; }
+        .stats-btn-turns { background: #9b59b6; }
+
+        .stats-log {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stats-log-entry {
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .stats-log-entry.adjustment {
+            color: #f39c12;
+        }
+
+        .stats-no-logs {
+            text-align: center;
+            opacity: 0.5;
+            padding: 30px;
+        }
+
+        /* All Stats Modal */
+        .all-stats-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .all-stats-overlay.open {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .all-stats-modal {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .all-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .all-stats-header h2 {
+            font-size: 1.3rem;
+            margin: 0;
+        }
+
+        .all-stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .all-stats-player {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            border-left: 4px solid;
+        }
+
+        .all-stats-player-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 100px;
+        }
+
+        .all-stats-player-data {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .all-stats-player-data span {
+            white-space: nowrap;
+        }
+
+        /* Clear storage button */
+        .clear-storage-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            font-size: 0.7rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: #888;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Fullscreen adjustments */
+        body.fullscreen .clear-storage-btn {
+            display: none;
+        }
+
+        /* Hide clear button on game screen */
+        body.game-screen .clear-storage-btn {
+            display: none;
+        }
+
+        /* Portrait optimization */
+        @media (max-height: 700px) {
+            .btn-turn {
+                width: min(75vw, 280px);
+                height: min(75vw, 280px);
+            }
+            .btn-turn .turn-timer {
+                font-size: 3rem;
+            }
+            .btn-turn .turn-label {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .btn-turn {
+                width: min(65vw, 240px);
+                height: min(65vw, 240px);
+            }
+            .btn-turn .turn-timer {
+                font-size: 2.5rem;
+            }
+            .btn-turn .turn-label {
+                font-size: 1.5rem;
+            }
+            .current-player-info .current-player-title {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Setup Screen -->
+        <div id="setup-screen">
+            <div class="setup-section">
+                <div class="timer-count-selector">
+                    <button onclick="changePlayerCount(-1)">−</button>
+                    <span id="player-count">4</span>
+                    <button onclick="changePlayerCount(1)">+</button>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <div id="player-config-list" class="timer-config-list"></div>
+            </div>
+
+            <button class="start-btn" onclick="startGame()">Start</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen">
+            <!-- Header Bar -->
+            <div class="header-bar">
+                <button class="btn-icon" id="btn-sound" onclick="toggleSound()">♪</button>
+                <button class="btn-icon" id="btn-auto-next" onclick="toggleAutoTransition()">↻</button>
+                <button class="btn-icon" id="btn-stats" onclick="openStats()">☰</button>
+                <button class="btn-icon" id="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
+            </div>
+
+            <!-- Section B - Current Turn -->
+            <div class="section section-b" id="section-b">
+                <!-- Player Info - Top third -->
+                <div class="player-info-section">
+                    <div class="current-player-nav">
+                        <button class="nav-arrow" id="nav-arrow-left" onclick="changeCurrentPlayer(-1)">‹</button>
+                        <div class="current-player-info">
+                            <div class="current-player-title" id="current-player-title">Player 1</div>
+                            <div class="avg-turn-time" id="avg-turn-time"></div>
+                        </div>
+                        <button class="nav-arrow" id="nav-arrow-right" onclick="changeCurrentPlayer(1)">›</button>
+                    </div>
+                </div>
+                <!-- Big circular button - Bottom two thirds -->
+                <div class="turn-button-section">
+                    <button class="btn-turn" id="btn-toggle-turn" onclick="toggleTurn()">
+                        <span class="turn-timer" id="turn-timer">00:00</span>
+                        <span class="turn-label" id="turn-label">Play</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer Bar -->
+            <div class="footer-bar">
+                <button class="btn-footer btn-back" onclick="goBack()">◀ Back</button>
+                <button class="btn-footer btn-stats" onclick="openAllStats()">Stats</button>
+                <button class="btn-footer btn-pause" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+            </div>
+        </div>
+
+        <!-- Stats Modal -->
+        <div class="stats-overlay" id="stats-overlay">
+            <div class="stats-modal">
+                <div class="stats-header">
+                    <h2>Statistics</h2>
+                    <button class="btn-close-stats" onclick="closeStats()">✕</button>
+                </div>
+                <div class="player-tabs" id="player-tabs"></div>
+                <div class="stats-content" id="stats-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="clear-storage-btn" onclick="clearStorage()">Clear</button>
+
+    <!-- All Stats Modal -->
+    <div class="all-stats-overlay" id="all-stats-overlay">
+        <div class="all-stats-modal">
+            <div class="all-stats-header">
+                <h2>All Players</h2>
+                <button class="btn-close-stats" onclick="closeAllStats()">✕</button>
+            </div>
+            <div class="all-stats-list" id="all-stats-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const defaultColors = [
+            '#f1f500', '#e53935', '#1e88e5', '#43a047', '#8e24aa',
+            '#212121', '#ff9800', '#ffffff', '#795548', '#00bcd4'
+        ];
+
+        const STORAGE_KEY = 'gameTimerState';
+
+        let state = {
+            screen: 'setup',
+            playerCount: 4,
+            players: [],
+            currentPlayerIndex: 0,
+            turnSeconds: 0,
+            turnNumber: 0,
+            isTurnRunning: false,
+            isPaused: false,
+            autoTransition: true,
+            soundEnabled: true,
+            gameLog: [],
+            playerLogs: []
+        };
+
+        let turnInterval = null;
+        let wakeLock = null;
+        let audioContext = null;
+
+        // ==================== Audio ====================
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playBeep(frequency = 800, duration = 150) {
+            if (!state.soundEnabled) return;
+
+            try {
+                initAudio();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration / 1000);
+            } catch (e) {
+                console.log('Audio not available');
+            }
+        }
+
+        function playTurnChangeSound() {
+            playBeep(600, 100);
+            setTimeout(() => playBeep(800, 150), 120);
+        }
+
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            updateSoundButton();
+            saveState();
+
+            if (state.soundEnabled) {
+                playBeep(600, 100);
+            }
+        }
+
+        function updateSoundButton() {
+            const btn = document.getElementById('btn-sound');
+            if (state.soundEnabled) {
+                btn.textContent = '♪';
+                btn.classList.remove('inactive');
+            } else {
+                btn.textContent = '♪';
+                btn.classList.add('inactive');
+            }
+        }
+
+        // ==================== Wake Lock ====================
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock released');
+                    });
+                } catch (err) {
+                    console.log('Wake Lock error:', err);
+                }
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock) {
+                await wakeLock.release();
+                wakeLock = null;
+            }
+        }
+
+        // Re-acquire wake lock on visibility change
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && state.screen === 'game' && !state.isPaused) {
+                await requestWakeLock();
+            }
+        });
+
+        // ==================== Fullscreen ====================
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                }
+                document.body.classList.add('fullscreen');
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                document.body.classList.remove('fullscreen');
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                document.body.classList.remove('fullscreen');
+            }
+        });
+
+        // ==================== Storage ====================
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const loaded = JSON.parse(saved);
+                state = { ...state, ...loaded };
+                return true;
+            }
+            return false;
+        }
+
+        function clearStorage() {
+            if (confirm('Clear all saved data?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        // ==================== Formatting ====================
+
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function formatTimeShort(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // ==================== Setup Screen ====================
+
+        function changePlayerCount(delta) {
+            state.playerCount = Math.max(2, Math.min(10, state.playerCount + delta));
+            document.getElementById('player-count').textContent = state.playerCount;
+            renderPlayerConfig();
+            saveState();
+        }
+
+        function renderPlayerConfig() {
+            const container = document.getElementById('player-config-list');
+            container.innerHTML = '';
+
+            for (let i = 0; i < state.playerCount; i++) {
+                const existingPlayer = state.players[i] || {};
+                const div = document.createElement('div');
+                div.className = 'timer-config-item';
+                div.innerHTML = `
+                    <span class="timer-number">#${i + 1}</span>
+                    <input type="color" id="color-${i}" value="${existingPlayer.color || defaultColors[i % defaultColors.length]}">
+                    <input type="text" id="name-${i}" placeholder="Player ${i + 1}" value="${existingPlayer.name || ''}">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function startGame() {
+            // Initialize audio on first interaction
+            initAudio();
+
+            state.players = [];
+            for (let i = 0; i < state.playerCount; i++) {
+                state.players.push({
+                    index: i,
+                    name: document.getElementById(`name-${i}`).value || '',
+                    color: document.getElementById(`color-${i}`).value,
+                    totalSeconds: 0,
+                    turnAdjustment: 0
+                });
+            }
+
+            state.screen = 'game';
+            state.currentPlayerIndex = 0;
+            state.turnSeconds = 0;
+            state.turnNumber = 0;
+            state.isTurnRunning = false;
+            state.isPaused = false;
+            state.autoTransition = true;
+            state.gameLog = [];
+            state.playerLogs = state.players.map(() => []);
+
+            saveState();
+            showGameScreen();
+            requestWakeLock();
+        }
+
+        // ==================== Game Screen ====================
+
+        function showGameScreen() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            document.body.classList.add('game-screen');
+
+            updateCurrentPlayerDisplay();
+            updateTurnTimerDisplay();
+            updatePauseButton();
+            updateTurnButtons();
+            updateNavArrows();
+            updateAutoTransitionButton();
+            updateSoundButton();
+        }
+
+        function getPlayerDisplayName(player) {
+            return player.name || `Player ${player.index + 1}`;
+        }
+
+        function updateCurrentPlayerDisplay() {
+            const player = state.players[state.currentPlayerIndex];
+            const title = document.getElementById('current-player-title');
+            const avgTimeEl = document.getElementById('avg-turn-time');
+            const sectionB = document.getElementById('section-b');
+
+            if (player.name) {
+                title.textContent = player.name;
+            } else {
+                title.textContent = `Player ${player.index + 1}`;
+            }
+
+            const avgTimes = getPlayerAvgTimes();
+            const playerAvg = avgTimes[state.currentPlayerIndex];
+            if (playerAvg !== null) {
+                const emoji = getPlayerEmoji(state.currentPlayerIndex, avgTimes);
+                avgTimeEl.textContent = `~ ${formatTimeShort(playerAvg)}${emoji}`;
+                avgTimeEl.style.display = 'block';
+            } else {
+                avgTimeEl.style.display = 'none';
+            }
+
+            document.body.style.background = player.color;
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', player.color);
+            sectionB.style.backgroundColor = 'transparent';
+        }
+
+        function updateTurnTimerDisplay() {
+            const timerEl = document.getElementById('turn-timer');
+            timerEl.textContent = formatTimeShort(state.turnSeconds);
+        }
+
+        function updatePauseButton() {
+            const btn = document.getElementById('btn-pause');
+            if (state.isPaused) {
+                btn.textContent = '▶ Resume';
+                btn.classList.add('paused');
+            } else {
+                btn.textContent = '⏸ Pause';
+                btn.classList.remove('paused');
+            }
+        }
+
+        function updateTurnButtons() {
+            const btn = document.getElementById('btn-toggle-turn');
+            const label = document.getElementById('turn-label');
+            if (state.isTurnRunning) {
+                label.textContent = 'NEXT';
+                btn.classList.add('running');
+            } else {
+                label.textContent = 'Play';
+                btn.classList.remove('running');
+            }
+        }
+
+        function toggleTurn() {
+            if (state.isTurnRunning) {
+                endTurn();
+            } else {
+                startTurn();
+            }
+        }
+
+        function getPlayerTurnCount(idx) {
+            const actualTurns = state.gameLog.filter(e => e.playerIndex === idx).length;
+            const adjustment = state.players[idx].turnAdjustment || 0;
+            return Math.max(0, actualTurns + adjustment);
+        }
+
+        function getPlayerAvgTimes() {
+            const avgTimes = state.players.map((player, idx) => {
+                const turnCount = getPlayerTurnCount(idx);
+                if (turnCount === 0) return null;
+                return Math.round(player.totalSeconds / turnCount);
+            });
+            return avgTimes;
+        }
+
+        function getPlayerEmoji(idx, avgTimes) {
+            const validAvgTimes = avgTimes.filter(t => t !== null);
+            if (validAvgTimes.length < 2) return '';
+
+            const playerAvg = avgTimes[idx];
+            if (playerAvg === null) return '';
+
+            const minAvg = Math.min(...validAvgTimes);
+            const maxAvg = Math.max(...validAvgTimes);
+
+            if (minAvg === maxAvg) return '';
+
+            const firstMinIdx = avgTimes.findIndex(t => t === minAvg);
+            const firstMaxIdx = avgTimes.findIndex(t => t === maxAvg);
+
+            if (idx === firstMinIdx) return ' 🚀';
+            if (idx === firstMaxIdx) return ' 🐢';
+            return '';
+        }
+
+        let statsSelectedPlayer = 0;
+
+        function openStats() {
+            if (!state.isPaused && state.isTurnRunning) {
+                state.isPaused = true;
+                updatePauseButton();
+                updateTurnTimerDisplay();
+                releaseWakeLock();
+                saveState();
+            }
+
+            statsSelectedPlayer = state.currentPlayerIndex;
+            renderStatsTabs();
+            renderStatsContent();
+            document.getElementById('stats-overlay').classList.add('open');
+        }
+
+        function closeStats() {
+            document.getElementById('stats-overlay').classList.remove('open');
+        }
+
+        function openAllStats() {
+            renderAllStats();
+            document.getElementById('all-stats-overlay').classList.add('open');
+        }
+
+        function closeAllStats() {
+            document.getElementById('all-stats-overlay').classList.remove('open');
+        }
+
+        function renderAllStats() {
+            const container = document.getElementById('all-stats-list');
+            const avgTimes = getPlayerAvgTimes();
+
+            container.innerHTML = state.players.map((player, idx) => {
+                const turnCount = getPlayerTurnCount(idx);
+                const avgTime = avgTimes[idx];
+                const emoji = getPlayerEmoji(idx, avgTimes);
+
+                return `
+                    <div class="all-stats-player" style="border-left-color: ${player.color}">
+                        <div class="all-stats-player-name" style="color: ${player.color}">${getPlayerDisplayName(player)}${emoji}</div>
+                        <div class="all-stats-player-data">
+                            <span>${formatTime(player.totalSeconds)}</span>
+                            <span>${turnCount} turns</span>
+                            <span>~${avgTime !== null ? formatTimeShort(avgTime) : '--:--'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectStatsPlayer(idx) {
+            statsSelectedPlayer = idx;
+            renderStatsTabs();
+            renderStatsContent();
+        }
+
+        function renderStatsTabs() {
+            const container = document.getElementById('player-tabs');
+            container.innerHTML = '';
+
+            state.players.forEach((player, idx) => {
+                const tab = document.createElement('button');
+                tab.className = `player-tab ${idx === statsSelectedPlayer ? 'active' : ''}`;
+                tab.style.borderColor = player.color;
+                if (idx === statsSelectedPlayer) {
+                    tab.style.background = player.color;
+                }
+                tab.textContent = getPlayerDisplayName(player);
+                tab.onclick = () => selectStatsPlayer(idx);
+                container.appendChild(tab);
+            });
+        }
+
+        function renderStatsContent() {
+            const container = document.getElementById('stats-content');
+            const player = state.players[statsSelectedPlayer];
+            const logs = state.playerLogs[statsSelectedPlayer] || [];
+            const turnCount = getPlayerTurnCount(statsSelectedPlayer);
+            const avgTimes = getPlayerAvgTimes();
+            const avgTime = avgTimes[statsSelectedPlayer];
+            const emoji = getPlayerEmoji(statsSelectedPlayer, avgTimes);
+
+            let summaryText = `${formatTime(player.totalSeconds)} / ${turnCount} turns`;
+            if (avgTime !== null) {
+                summaryText += ` / ~${formatTimeShort(avgTime)}${emoji}`;
+            }
+
+            const logEntries = logs.length === 0
+                ? '<div class="stats-no-logs">No turns yet</div>'
+                : [...logs].reverse().map(entry => {
+                    if (entry.type === 'turn') {
+                        return `<div class="stats-log-entry">Turn ${entry.playerTurnNumber} (${entry.turnNumber}): ${formatTimeShort(entry.seconds)}</div>`;
+                    } else if (entry.type === 'adjustment') {
+                        const sign = entry.seconds >= 0 ? '+' : '';
+                        return `<div class="stats-log-entry adjustment">Time adjustment: ${sign}${formatTimeShort(Math.abs(entry.seconds))}</div>`;
+                    } else if (entry.type === 'turnAdjustment') {
+                        const sign = entry.turns >= 0 ? '+' : '';
+                        return `<div class="stats-log-entry adjustment">Turn adjustment: ${sign}${entry.turns}</div>`;
+                    }
+                    return '';
+                }).join('');
+
+            container.innerHTML = `
+                <div class="stats-player-info">
+                    <div class="stats-player-name" style="color: ${player.color}">${getPlayerDisplayName(player)}</div>
+                    <div class="stats-player-summary">${summaryText}</div>
+                </div>
+                <div class="stats-controls">
+                    <button class="stats-btn-time" onclick="adjustPlayerTimeFromStats(-60)">−1 min</button>
+                    <button class="stats-btn-time" onclick="adjustPlayerTimeFromStats(60)">+1 min</button>
+                    <button class="stats-btn-turns" onclick="adjustPlayerTurnsFromStats(-1)">−1 turn</button>
+                    <button class="stats-btn-turns" onclick="adjustPlayerTurnsFromStats(1)">+1 turn</button>
+                </div>
+                <div class="stats-log">${logEntries}</div>
+            `;
+        }
+
+        function adjustPlayerTimeFromStats(delta) {
+            adjustPlayerTime(statsSelectedPlayer, delta);
+            renderStatsContent();
+        }
+
+        function adjustPlayerTurnsFromStats(delta) {
+            adjustPlayerTurns(statsSelectedPlayer, delta);
+            renderStatsContent();
+        }
+
+        // ==================== Turn Controls ====================
+
+        function updateNavArrows() {
+            const leftArrow = document.getElementById('nav-arrow-left');
+            const rightArrow = document.getElementById('nav-arrow-right');
+
+            if (state.isTurnRunning) {
+                leftArrow.classList.remove('visible');
+                rightArrow.classList.remove('visible');
+            } else {
+                leftArrow.classList.add('visible');
+                rightArrow.classList.add('visible');
+            }
+        }
+
+        function changeCurrentPlayer(delta) {
+            if (state.isTurnRunning) return;
+
+            state.currentPlayerIndex = (state.currentPlayerIndex + delta + state.players.length) % state.players.length;
+            updateCurrentPlayerDisplay();
+            saveState();
+        }
+
+        function startTurn() {
+            if (state.isTurnRunning) return;
+
+            if (state.isPaused) {
+                state.isPaused = false;
+                updatePauseButton();
+            }
+
+            stopAllTimers();
+            requestWakeLock();
+
+            state.isTurnRunning = true;
+            state.turnSeconds = 0;
+            state.turnNumber++;
+
+            turnInterval = setInterval(() => {
+                if (!state.isPaused) {
+                    state.turnSeconds++;
+                    updateTurnTimerDisplay();
+                    saveState();
+                }
+            }, 1000);
+
+            updateTurnButtons();
+            updateNavArrows();
+            updateTurnTimerDisplay();
+            saveState();
+        }
+
+        function endTurn() {
+            if (!state.isTurnRunning) return;
+
+            if (turnInterval) {
+                clearInterval(turnInterval);
+                turnInterval = null;
+            }
+
+            const player = state.players[state.currentPlayerIndex];
+            player.totalSeconds += state.turnSeconds;
+
+            state.gameLog.push({
+                turnNumber: state.turnNumber,
+                playerIndex: state.currentPlayerIndex,
+                playerName: getPlayerDisplayName(player),
+                color: player.color,
+                turnTime: state.turnSeconds,
+                totalTime: player.totalSeconds
+            });
+
+            if (!state.playerLogs[state.currentPlayerIndex]) {
+                state.playerLogs[state.currentPlayerIndex] = [];
+            }
+            const playerTurnNumber = state.playerLogs[state.currentPlayerIndex].filter(l => l.type === 'turn').length + 1;
+            state.playerLogs[state.currentPlayerIndex].push({
+                type: 'turn',
+                turnNumber: state.turnNumber,
+                playerTurnNumber: playerTurnNumber,
+                seconds: state.turnSeconds
+            });
+
+            state.turnSeconds = 0;
+            state.isTurnRunning = false;
+
+            state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+
+            // Play sound for turn change
+            playTurnChangeSound();
+
+            updateCurrentPlayerDisplay();
+            updateTurnTimerDisplay();
+            updateTurnButtons();
+            updateNavArrows();
+            saveState();
+
+            if (state.autoTransition) {
+                startTurn();
+            }
+        }
+
+        function toggleAutoTransition() {
+            state.autoTransition = !state.autoTransition;
+            updateAutoTransitionButton();
+            saveState();
+        }
+
+        function updateAutoTransitionButton() {
+            const btn = document.getElementById('btn-auto-next');
+            if (state.autoTransition) {
+                btn.classList.remove('inactive');
+            } else {
+                btn.classList.add('inactive');
+            }
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            updatePauseButton();
+            updateTurnTimerDisplay();
+
+            if (state.isPaused) {
+                releaseWakeLock();
+            } else {
+                requestWakeLock();
+            }
+
+            saveState();
+        }
+
+        // ==================== Player Timer Controls ====================
+
+        function stopAllTimers() {
+            if (turnInterval) {
+                clearInterval(turnInterval);
+                turnInterval = null;
+            }
+            state.isTurnRunning = false;
+            updateTurnButtons();
+        }
+
+        function adjustPlayerTime(idx, delta) {
+            state.players[idx].totalSeconds = Math.max(0, state.players[idx].totalSeconds + delta);
+
+            if (!state.playerLogs[idx]) {
+                state.playerLogs[idx] = [];
+            }
+            state.playerLogs[idx].push({
+                type: 'adjustment',
+                seconds: delta
+            });
+
+            saveState();
+        }
+
+        function adjustPlayerTurns(idx, delta) {
+            const actualTurns = state.gameLog.filter(e => e.playerIndex === idx).length;
+            const currentAdjustment = state.players[idx].turnAdjustment || 0;
+            const newTotal = actualTurns + currentAdjustment + delta;
+
+            if (newTotal < 0) return;
+
+            state.players[idx].turnAdjustment = currentAdjustment + delta;
+
+            if (!state.playerLogs[idx]) {
+                state.playerLogs[idx] = [];
+            }
+            state.playerLogs[idx].push({
+                type: 'turnAdjustment',
+                turns: delta
+            });
+
+            updateCurrentPlayerDisplay();
+            saveState();
+        }
+
+        // ==================== Navigation ====================
+
+        function goBack() {
+            if (state.isTurnRunning) {
+                if (!confirm('Stop all timers and go back?')) {
+                    return;
+                }
+            }
+
+            stopAllTimers();
+            releaseWakeLock();
+
+            document.body.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1a1a2e');
+            document.body.classList.remove('game-screen');
+
+            state.screen = 'setup';
+            saveState();
+
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+            renderPlayerConfig();
+        }
+
+        // ==================== Initialization ====================
+
+        function init() {
+            if (loadState()) {
+                document.getElementById('player-count').textContent = state.playerCount;
+
+                if (state.screen === 'game' && state.players.length > 0) {
+                    showGameScreen();
+
+                    state.isTurnRunning = false;
+                    state.isPaused = true;
+                    updatePauseButton();
+                    updateTurnButtons();
+                } else {
+                    renderPlayerConfig();
+                }
+            } else {
+                renderPlayerConfig();
+            }
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+
+        init();
+    </script>
+</body>
+</html>
