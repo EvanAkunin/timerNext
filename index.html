@@ -725,6 +725,7 @@
                 <button class="btn-icon" id="btn-sound" onclick="toggleSound()">♪</button>
                 <button class="btn-icon" id="btn-auto-next" onclick="toggleAutoTransition()">↻</button>
                 <button class="btn-icon" id="btn-stats" onclick="openStats()">☰</button>
+                <button class="btn-icon" id="btn-all-stats" onclick="openAllStats()">◫</button>
                 <button class="btn-icon" id="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
             </div>
 
@@ -747,14 +748,13 @@
                         <span class="turn-timer" id="turn-timer">00:00</span>
                         <span class="turn-label" id="turn-label">Play</span>
                     </button>
-                    <button class="btn-skip" id="btn-skip" onclick="skipTurn()">Skip ⏭</button>
+                    <button class="btn-skip" id="btn-skip" onclick="skipTurn()">Skip »</button>
                 </div>
             </div>
 
             <!-- Footer Bar -->
             <div class="footer-bar">
                 <button class="btn-footer btn-back" onclick="goBack()">◀ Back</button>
-                <button class="btn-footer btn-stats" onclick="openAllStats()">Stats</button>
                 <button class="btn-footer btn-stop" id="btn-stop" onclick="stopTurn()">↺ Reset</button>
                 <button class="btn-footer btn-pause" id="btn-pause" onclick="togglePause()">❙❙ Pause</button>
             </div>
