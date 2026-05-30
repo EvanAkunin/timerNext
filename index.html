@@ -131,6 +131,70 @@
             background: transparent;
         }
 
+        .color-swatch {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            flex-shrink: 0;
+        }
+
+        .color-picker-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 50, 0.98);
+            padding: 20px;
+            border-radius: 15px;
+            z-index: 2000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .color-picker-popup.open {
+            display: block;
+        }
+
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            gap: 10px;
+        }
+
+        .color-picker-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .color-picker-option:active {
+            transform: scale(0.9);
+        }
+
+        .color-picker-option.selected {
+            border-color: white;
+        }
+
+        .color-picker-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+        }
+
+        .color-picker-backdrop.open {
+            display: block;
+        }
+
         .start-btn {
             padding: 18px 60px;
             font-size: 1.4rem;
@@ -289,7 +353,7 @@
             width: min(85vw, 350px);
             height: min(85vw, 350px);
             border-radius: 50%;
-            border: 4px solid rgba(255,255,255,0.7);
+            border: 6px solid rgba(255,255,255,0.7);
             background: transparent;
             cursor: pointer;
             display: flex;
@@ -324,6 +388,30 @@
 
         .btn-turn.running {
             animation: pulse-border 1.5s infinite;
+        }
+
+        .btn-skip {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 18px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 20px;
+            background: transparent;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .btn-skip.visible {
+            display: block;
+        }
+
+        .turn-button-section {
+            position: relative;
         }
 
         @keyframes pulse-border {
@@ -558,14 +646,14 @@
         /* Clear storage button */
         .clear-storage-btn {
             position: fixed;
-            bottom: 10px;
-            right: 10px;
-            padding: 8px 12px;
-            font-size: 0.7rem;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            background: rgba(0,0,0,0.3);
-            color: #888;
+            bottom: 15px;
+            right: 15px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
@@ -659,6 +747,7 @@
                         <span class="turn-timer" id="turn-timer">00:00</span>
                         <span class="turn-label" id="turn-label">Play</span>
                     </button>
+                    <button class="btn-skip" id="btn-skip" onclick="skipTurn()">Skip ⏭</button>
                 </div>
             </div>
 
@@ -666,7 +755,8 @@
             <div class="footer-bar">
                 <button class="btn-footer btn-back" onclick="goBack()">◀ Back</button>
                 <button class="btn-footer btn-stats" onclick="openAllStats()">Stats</button>
-                <button class="btn-footer btn-pause" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+                <button class="btn-footer btn-stop" id="btn-stop" onclick="stopTurn()">↺ Reset</button>
+                <button class="btn-footer btn-pause" id="btn-pause" onclick="togglePause()">❙❙ Pause</button>
             </div>
         </div>
 
@@ -685,6 +775,12 @@
 
     <button class="clear-storage-btn" onclick="clearStorage()">Clear</button>
 
+    <!-- Color Picker -->
+    <div class="color-picker-backdrop" id="color-picker-backdrop" onclick="closeColorPicker()"></div>
+    <div class="color-picker-popup" id="color-picker-popup">
+        <div class="color-picker-grid" id="color-picker-grid"></div>
+    </div>
+
     <!-- All Stats Modal -->
     <div class="all-stats-overlay" id="all-stats-overlay">
         <div class="all-stats-modal">
@@ -698,8 +794,8 @@
 
     <script>
         const defaultColors = [
-            '#f1f500', '#e53935', '#1e88e5', '#43a047', '#8e24aa',
-            '#212121', '#ff9800', '#ffffff', '#795548', '#00bcd4'
+            '#c9c400', '#c45a55', '#5a8ab8', '#5a9a60', '#8a6a9a',
+            '#2a2a2a', '#d49a40', '#a0a0a0', '#8d7060', '#5aacb8'
         ];
 
         const STORAGE_KEY = 'gameTimerState';
@@ -762,6 +858,12 @@
         function playTurnChangeSound() {
             playBeep(600, 100);
             setTimeout(() => playBeep(800, 150), 120);
+        }
+
+        function playSkipSound() {
+            playBeep(400, 80);
+            setTimeout(() => playBeep(500, 80), 100);
+            setTimeout(() => playBeep(600, 100), 200);
         }
 
         function toggleSound() {
@@ -894,15 +996,48 @@
 
             for (let i = 0; i < state.playerCount; i++) {
                 const existingPlayer = state.players[i] || {};
+                const color = existingPlayer.color || defaultColors[i % defaultColors.length];
                 const div = document.createElement('div');
                 div.className = 'timer-config-item';
                 div.innerHTML = `
                     <span class="timer-number">#${i + 1}</span>
-                    <input type="color" id="color-${i}" value="${existingPlayer.color || defaultColors[i % defaultColors.length]}">
+                    <div class="color-swatch" id="swatch-${i}" style="background: ${color}" onclick="openColorPicker(${i})"></div>
+                    <input type="hidden" id="color-${i}" value="${color}">
                     <input type="text" id="name-${i}" placeholder="Player ${i + 1}" value="${existingPlayer.name || ''}">
                 `;
                 container.appendChild(div);
             }
+        }
+
+        let currentColorPickerIndex = null;
+
+        function openColorPicker(playerIndex) {
+            currentColorPickerIndex = playerIndex;
+            const currentColor = document.getElementById(`color-${playerIndex}`).value;
+            const grid = document.getElementById('color-picker-grid');
+
+            grid.innerHTML = defaultColors.map(color => `
+                <div class="color-picker-option ${color === currentColor ? 'selected' : ''}"
+                     style="background: ${color}"
+                     onclick="selectColor('${color}')"></div>
+            `).join('');
+
+            document.getElementById('color-picker-backdrop').classList.add('open');
+            document.getElementById('color-picker-popup').classList.add('open');
+        }
+
+        function closeColorPicker() {
+            document.getElementById('color-picker-backdrop').classList.remove('open');
+            document.getElementById('color-picker-popup').classList.remove('open');
+            currentColorPickerIndex = null;
+        }
+
+        function selectColor(color) {
+            if (currentColorPickerIndex !== null) {
+                document.getElementById(`color-${currentColorPickerIndex}`).value = color;
+                document.getElementById(`swatch-${currentColorPickerIndex}`).style.background = color;
+            }
+            closeColorPicker();
         }
 
         function startGame() {
@@ -947,6 +1082,7 @@
             updatePauseButton();
             updateTurnButtons();
             updateNavArrows();
+            updateSkipButton();
             updateAutoTransitionButton();
             updateSoundButton();
         }
@@ -993,7 +1129,7 @@
                 btn.textContent = '▶ Resume';
                 btn.classList.add('paused');
             } else {
-                btn.textContent = '⏸ Pause';
+                btn.textContent = '❙❙ Pause';
                 btn.classList.remove('paused');
             }
         }
@@ -1230,6 +1366,7 @@
 
             updateTurnButtons();
             updateNavArrows();
+            updateSkipButton();
             updateTurnTimerDisplay();
             saveState();
         }
@@ -1277,10 +1414,65 @@
             updateTurnTimerDisplay();
             updateTurnButtons();
             updateNavArrows();
+            updateSkipButton();
             saveState();
 
             if (state.autoTransition) {
                 startTurn();
+            }
+        }
+
+        function stopTurn() {
+            if (!state.isTurnRunning) return;
+
+            if (turnInterval) {
+                clearInterval(turnInterval);
+                turnInterval = null;
+            }
+
+            state.turnSeconds = 0;
+            state.turnNumber--;
+            state.isTurnRunning = false;
+
+            updateTurnTimerDisplay();
+            updateTurnButtons();
+            updateNavArrows();
+            updateSkipButton();
+            saveState();
+        }
+
+        function skipTurn() {
+            if (!state.isTurnRunning) return;
+
+            if (turnInterval) {
+                clearInterval(turnInterval);
+                turnInterval = null;
+            }
+
+            state.turnSeconds = 0;
+            state.isTurnRunning = false;
+
+            state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+
+            playSkipSound();
+            updateCurrentPlayerDisplay();
+            updateTurnTimerDisplay();
+            updateTurnButtons();
+            updateNavArrows();
+            updateSkipButton();
+            saveState();
+
+            if (state.autoTransition) {
+                startTurn();
+            }
+        }
+
+        function updateSkipButton() {
+            const btn = document.getElementById('btn-skip');
+            if (state.isTurnRunning) {
+                btn.classList.add('visible');
+            } else {
+                btn.classList.remove('visible');
             }
         }
 
@@ -1407,6 +1599,18 @@
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+
+        // Hide fullscreen button on iOS (not supported)
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
+        if (isIOS()) {
+            const fullscreenBtn = document.getElementById('btn-fullscreen');
+            if (fullscreenBtn) {
+                fullscreenBtn.style.display = 'none';
+            }
         }
 
         init();
