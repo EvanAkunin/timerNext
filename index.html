@@ -195,9 +195,17 @@
             display: block;
         }
 
+        .setup-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
         .start-btn {
-            padding: 18px 60px;
-            font-size: 1.4rem;
+            padding: 16px 40px;
+            font-size: 1.2rem;
             border: none;
             border-radius: 30px;
             background: linear-gradient(135deg, #4a90d9, #67b26f);
@@ -207,11 +215,32 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             -webkit-tap-highlight-color: transparent;
-            margin-top: auto;
-            margin-bottom: 20px;
         }
 
         .start-btn:active {
+            transform: scale(0.98);
+        }
+
+        .continue-btn {
+            padding: 16px 40px;
+            font-size: 1.2rem;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 30px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            -webkit-tap-highlight-color: transparent;
+            display: none;
+        }
+
+        .continue-btn.visible {
+            display: block;
+        }
+
+        .continue-btn:active {
             transform: scale(0.98);
         }
 
@@ -347,6 +376,7 @@
             align-items: center;
             justify-content: center;
             padding: 10px;
+            position: relative;
         }
 
         .btn-turn {
@@ -390,10 +420,9 @@
             animation: pulse-border 1.5s infinite;
         }
 
-        .btn-skip {
+        .btn-skip, .btn-end-turn {
             position: absolute;
             bottom: 20px;
-            right: 20px;
             padding: 10px 18px;
             border: 2px solid rgba(255,255,255,0.5);
             border-radius: 20px;
@@ -406,12 +435,16 @@
             display: none;
         }
 
-        .btn-skip.visible {
-            display: block;
+        .btn-skip {
+            right: 20px;
         }
 
-        .turn-button-section {
-            position: relative;
+        .btn-end-turn {
+            left: 20px;
+        }
+
+        .btn-skip.visible, .btn-end-turn.visible {
+            display: block;
         }
 
         @keyframes pulse-border {
@@ -711,11 +744,14 @@
                 </div>
             </div>
 
+            <div class="setup-buttons">
+                <button class="start-btn" onclick="confirmNewGame()">New Game</button>
+                <button class="continue-btn" id="continue-btn" onclick="continueGame()">Continue</button>
+            </div>
+
             <div class="setup-section">
                 <div id="player-config-list" class="timer-config-list"></div>
             </div>
-
-            <button class="start-btn" onclick="startGame()">Start</button>
         </div>
 
         <!-- Game Screen -->
@@ -744,6 +780,7 @@
                 </div>
                 <!-- Big circular button - Bottom two thirds -->
                 <div class="turn-button-section">
+                    <button class="btn-end-turn" id="btn-end-turn" onclick="endTurnManual()">End turn ›</button>
                     <button class="btn-turn" id="btn-toggle-turn" onclick="toggleTurn()">
                         <span class="turn-timer" id="turn-timer">00:00</span>
                         <span class="turn-label" id="turn-label">Play</span>
@@ -754,7 +791,7 @@
 
             <!-- Footer Bar -->
             <div class="footer-bar">
-                <button class="btn-footer btn-back" onclick="goBack()">◀ Back</button>
+                <button class="btn-footer btn-back" onclick="goBack()">⚙ Setup</button>
                 <button class="btn-footer btn-stop" id="btn-stop" onclick="stopTurn()">↺ Reset</button>
                 <button class="btn-footer btn-pause" id="btn-pause" onclick="togglePause()">❙❙ Pause</button>
             </div>
@@ -864,6 +901,11 @@
             playBeep(400, 80);
             setTimeout(() => playBeep(500, 80), 100);
             setTimeout(() => playBeep(600, 100), 200);
+        }
+
+        function playStartSound() {
+            playBeep(500, 100);
+            setTimeout(() => playBeep(700, 150), 120);
         }
 
         function toggleSound() {
@@ -984,6 +1026,16 @@
         // ==================== Setup Screen ====================
 
         function changePlayerCount(delta) {
+            if (hasGameInProgress()) {
+                if (!confirm('Changing player count will end current game. Continue?')) {
+                    return;
+                }
+                // Clear game progress
+                state.gameLog = [];
+                state.playerLogs = [];
+                state.players = [];
+                updateContinueButton();
+            }
             state.playerCount = Math.max(2, Math.min(10, state.playerCount + delta));
             document.getElementById('player-count').textContent = state.playerCount;
             renderPlayerConfig();
@@ -1068,6 +1120,52 @@
             saveState();
             showGameScreen();
             requestWakeLock();
+        }
+
+        function continueGame() {
+            initAudio();
+
+            // Update names and colors from setup fields
+            for (let i = 0; i < state.players.length; i++) {
+                const nameInput = document.getElementById(`name-${i}`);
+                const colorInput = document.getElementById(`color-${i}`);
+                if (nameInput) {
+                    state.players[i].name = nameInput.value || '';
+                }
+                if (colorInput) {
+                    state.players[i].color = colorInput.value;
+                }
+            }
+
+            state.screen = 'game';
+            state.isTurnRunning = false;
+            state.isPaused = true;
+            saveState();
+            showGameScreen();
+            requestWakeLock();
+        }
+
+        function hasGameInProgress() {
+            return state.players.length > 0 &&
+                   (state.gameLog.length > 0 || state.players.some(p => p.totalSeconds > 0));
+        }
+
+        function updateContinueButton() {
+            const btn = document.getElementById('continue-btn');
+            if (hasGameInProgress()) {
+                btn.classList.add('visible');
+            } else {
+                btn.classList.remove('visible');
+            }
+        }
+
+        function confirmNewGame() {
+            if (hasGameInProgress()) {
+                if (!confirm('Start new game? Current game progress will be lost.')) {
+                    return;
+                }
+            }
+            startGame();
         }
 
         // ==================== Game Screen ====================
@@ -1341,7 +1439,7 @@
             saveState();
         }
 
-        function startTurn() {
+        function startTurn(skipSound = false) {
             if (state.isTurnRunning) return;
 
             if (state.isPaused) {
@@ -1355,6 +1453,10 @@
             state.isTurnRunning = true;
             state.turnSeconds = 0;
             state.turnNumber++;
+
+            if (!skipSound) {
+                playStartSound();
+            }
 
             turnInterval = setInterval(() => {
                 if (!state.isPaused) {
@@ -1371,7 +1473,7 @@
             saveState();
         }
 
-        function endTurn() {
+        function endTurn(autoNext = true) {
             if (!state.isTurnRunning) return;
 
             if (turnInterval) {
@@ -1407,7 +1509,6 @@
 
             state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
 
-            // Play sound for turn change
             playTurnChangeSound();
 
             updateCurrentPlayerDisplay();
@@ -1417,8 +1518,8 @@
             updateSkipButton();
             saveState();
 
-            if (state.autoTransition) {
-                startTurn();
+            if (autoNext && state.autoTransition) {
+                startTurn(true);
             }
         }
 
@@ -1442,8 +1543,6 @@
         }
 
         function skipTurn() {
-            if (!state.isTurnRunning) return;
-
             if (turnInterval) {
                 clearInterval(turnInterval);
                 turnInterval = null;
@@ -1463,17 +1562,25 @@
             saveState();
 
             if (state.autoTransition) {
-                startTurn();
+                startTurn(true);
             }
         }
 
         function updateSkipButton() {
-            const btn = document.getElementById('btn-skip');
+            const skipBtn = document.getElementById('btn-skip');
+            const endBtn = document.getElementById('btn-end-turn');
+            // Skip always visible
+            skipBtn.classList.add('visible');
+            // End turn only when running
             if (state.isTurnRunning) {
-                btn.classList.add('visible');
+                endBtn.classList.add('visible');
             } else {
-                btn.classList.remove('visible');
+                endBtn.classList.remove('visible');
             }
+        }
+
+        function endTurnManual() {
+            endTurn(false);
         }
 
         function toggleAutoTransition() {
@@ -1573,6 +1680,7 @@
             document.getElementById('game-screen').style.display = 'none';
             document.getElementById('setup-screen').style.display = 'flex';
             renderPlayerConfig();
+            updateContinueButton();
         }
 
         // ==================== Initialization ====================
@@ -1590,6 +1698,7 @@
                     updateTurnButtons();
                 } else {
                     renderPlayerConfig();
+                    updateContinueButton();
                 }
             } else {
                 renderPlayerConfig();
